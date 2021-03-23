@@ -1,0 +1,11 @@
+[package]
+name = "stacksig"
+version = "0.1.0"
+authors = ["Mathias Hall-Andersen <mathias@hall-andersen.dk>"]
+edition = "2018"
+
+[dependencies]
+curve25519-dalek = "3"
+rand_core="0.5.1"
+sha2 = "0.9.3"
+digest = "0.9"
