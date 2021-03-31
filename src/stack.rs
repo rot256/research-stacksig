@@ -31,6 +31,10 @@ pub trait Stackable {
     type MessageZ: Message;
     type Challenge: Challenge;
 
+    type Precompute;
+
+    const CLAUSES: usize = 1;
+
     // produce a first round message
     fn sigma_a<R: RngCore + CryptoRng>(
         rng: &mut R,
@@ -43,10 +47,11 @@ pub trait Stackable {
         witness: &Self::Witness,
         state: &Self::State,
         challenge: &Self::Challenge,
-    ) -> Self::MessageZ;
+    ) -> (Self::Precompute, Self::MessageZ);
 
     // simulator
     fn ehvzk(
+        precom: &Self::Precompute,
         statement: &Self::Statement,
         challenge: &Self::Challenge,
         z: &Self::MessageZ,

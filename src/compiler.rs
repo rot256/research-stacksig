@@ -26,18 +26,18 @@ impl<M: Message> Message for CompiledMessageZ<M> {
     }
 }
 
-pub struct CompiledStatement<T>(T, T);
+pub struct CompiledStatement<S: Stackable>(S::Statement, S::Statement);
 
-impl<T> CompiledStatement<T> {
-    pub fn new(left: T, right: T) -> Self {
+impl<S: Stackable> CompiledStatement<S> {
+    pub fn new(left: S::Statement, right: S::Statement) -> Self {
         CompiledStatement(left, right)
     }
 
-    fn left(&self) -> &T {
+    fn left(&self) -> &S::Statement {
         &self.0
     }
 
-    fn right(&self) -> &T {
+    fn right(&self) -> &S::Statement {
         &self.1
     }
 }
@@ -85,13 +85,15 @@ impl<S: Stackable> Compiled<S> {
 */
 
 impl<S: Stackable> Stackable for Compiled<S> {
+    type Precompute = S::Precompute;
+
     type State = CompiledState<S::MessageA, S::State>;
 
     // new witness consists of the old witness and a side: Left/Right
     type Witness = CompiledWitness<S::Witness>;
 
     // new statement is a 2-tuple
-    type Statement = CompiledStatement<S::Statement>;
+    type Statement = CompiledStatement<S>;
 
     // round 1
     type MessageA = Commitment;
@@ -101,6 +103,8 @@ impl<S: Stackable> Stackable for Compiled<S> {
 
     // round 3
     type MessageZ = CompiledMessageZ<S::MessageZ>;
+
+    const CLAUSES: usize = 2 * S::CLAUSES;
 
     fn sigma_a<R: RngCore + CryptoRng>(
         rng: &mut R,
@@ -123,15 +127,16 @@ impl<S: Stackable> Stackable for Compiled<S> {
         witness: &Self::Witness,
         state: &Self::State,
         challenge: &Self::Challenge,
-    ) -> Self::MessageZ {
+    ) -> (Self::Precompute, Self::MessageZ) {
         // compute the active clause
-        let (z, ck, rd) = match witness.side {
+        let (precomp, z, ck, rd) = match witness.side {
             Side::Left => {
                 // run the real prover on the right
-                let z = S::sigma_z(statement.left(), &witness.witness, &state.st, challenge);
+                let (precomp, z) =
+                    S::sigma_z(statement.left(), &witness.witness, &state.st, challenge);
 
                 // simulate the right side
-                let a_right = S::ehvzk(statement.right(), challenge, &z);
+                let a_right = S::ehvzk(&precomp, statement.right(), challenge, &z);
 
                 // equivocate on the right side
                 let rd = state.td.equiv(
@@ -140,14 +145,15 @@ impl<S: Stackable> Stackable for Compiled<S> {
                     (Some(&state.a), Some(&a_right)),
                 );
 
-                (z, state.ck, rd)
+                (precomp, z, state.ck.clone(), rd)
             }
             Side::Right => {
                 // run the real prover on the left
-                let z = S::sigma_z(statement.right(), &witness.witness, &state.st, challenge);
+                let (precomp, z) =
+                    S::sigma_z(statement.right(), &witness.witness, &state.st, challenge);
 
                 // simulate the right side
-                let a_left = S::ehvzk(statement.left(), challenge, &z);
+                let a_left = S::ehvzk(&precomp, statement.left(), challenge, &z);
 
                 // equivocate on the left side
                 let rd = state.td.equiv(
@@ -156,19 +162,20 @@ impl<S: Stackable> Stackable for Compiled<S> {
                     (Some(&a_left), Some(&state.a)),
                 );
 
-                (z, state.ck, rd)
+                (precomp, z, state.ck.clone(), rd)
             }
         };
-        CompiledMessageZ { z, ck, rd }
+        (precomp, CompiledMessageZ { z, ck, rd })
     }
 
     fn ehvzk(
+        precomp: &Self::Precompute,
         statement: &Self::Statement,
         challenge: &Self::Challenge,
         z: &Self::MessageZ,
     ) -> Self::MessageA {
-        let left = S::ehvzk(statement.left(), challenge, &z.z);
-        let right = S::ehvzk(statement.right(), challenge, &z.z);
+        let left = S::ehvzk(&precomp, statement.left(), challenge, &z.z);
+        let right = S::ehvzk(&precomp, statement.right(), challenge, &z.z);
         z.ck.commit(&z.rd, (Some(&left), Some(&right)))
     }
 }

@@ -46,7 +46,7 @@ impl<S: Stackable> SignatureScheme<S> {
         };
 
         // finish last message
-        let z = S::sigma_z(pk, sk, &st, &challenge);
+        let (_, z) = S::sigma_z(pk, sk, &st, &challenge);
         Signature { a, z }
     }
 }

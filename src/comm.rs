@@ -1,5 +1,5 @@
 use curve25519_dalek::constants;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoBasepointTable, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 
 use rand_core::{CryptoRng, RngCore};
@@ -10,11 +10,14 @@ use sha2::{Digest, Sha512};
 use crate::stack::Message;
 use crate::Side;
 
+use std::fmt;
 use std::io::Write;
+
+use std::rc::Rc;
 
 impl Message for CommitKey {
     fn write<W: Write>(&self, writer: &mut W) {
-        let cp = self.0.compress();
+        let cp = self.0.basepoint().compress();
         writer.write_all(cp.as_bytes()).unwrap();
     }
 }
@@ -89,8 +92,17 @@ impl Trapdoor {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct CommitKey(RistrettoPoint, RistrettoPoint);
+#[derive(Clone)]
+pub struct CommitKey(Rc<RistrettoBasepointTable>, Rc<RistrettoBasepointTable>);
+
+impl fmt::Debug for CommitKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CommitKey")
+            .field("left", &self.0.basepoint())
+            .field("right", &self.0.basepoint())
+            .finish()
+    }
+}
 
 fn hash<M: Message>(v: &M) -> Scalar {
     let mut hash = Sha512::new();
@@ -126,7 +138,13 @@ impl CommitKey {
                 }
             }
         };
-        (CommitKey(l, r), Trapdoor { td, side: side })
+        (
+            CommitKey(
+                Rc::new(RistrettoBasepointTable::create(&l)),
+                Rc::new(RistrettoBasepointTable::create(&r)),
+            ),
+            Trapdoor { td, side: side },
+        )
     }
 
     pub fn commit<M1: Message, M2: Message>(
@@ -138,10 +156,10 @@ impl CommitKey {
         let comm = random * &constants::RISTRETTO_BASEPOINT_TABLE;
 
         // add first element
-        let comm = values.0.map(|v| comm + self.0 * hash(v)).unwrap_or(comm);
+        let comm = values.0.map(|v| comm + &hash(v) * &*self.0).unwrap_or(comm);
 
         // add second element
-        let comm = values.1.map(|v| comm + self.1 * hash(v)).unwrap_or(comm);
+        let comm = values.1.map(|v| comm + &hash(v) * &*self.1).unwrap_or(comm);
 
         Commitment(*comm.compress().as_bytes())
     }

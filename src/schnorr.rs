@@ -38,6 +38,7 @@ impl Stackable for Schnorr {
     type MessageA = CompressedRistretto;
     type MessageZ = Scalar;
     type Challenge = Scalar;
+    type Precompute = (RistrettoPoint, Scalar);
 
     fn sigma_a<R: RngCore + CryptoRng>(
         rng: &mut R,
@@ -49,20 +50,25 @@ impl Stackable for Schnorr {
     }
 
     fn sigma_z(
-        _statement: &Self::Statement,
+        statement: &Self::Statement,
         witness: &Self::Witness,
         state: &Self::State,
         challenge: &Self::Challenge,
-    ) -> Self::MessageZ {
-        challenge * witness + state
+    ) -> (Self::Precompute, Self::MessageZ) {
+        let z = challenge * witness + state;
+        let p = &z * &RISTRETTO_BASEPOINT_TABLE;
+        let cinv = -challenge;
+        ((p, cinv), z)
     }
 
     fn ehvzk(
+        precomp: &Self::Precompute,
         statement: &Self::Statement,
         challenge: &Self::Challenge,
         z: &Self::MessageZ,
     ) -> Self::MessageA {
         // g^z st^-c = a
-        (z * &RISTRETTO_BASEPOINT_TABLE + -challenge * statement).compress()
+        (precomp.0 + precomp.1 * statement).compress()
+        // (z * &RISTRETTO_BASEPOINT_TABLE + -challenge * statement).compress()
     }
 }
