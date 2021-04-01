@@ -1,5 +1,5 @@
 use curve25519_dalek::constants;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoBasepointTable, RistrettoPoint};
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoBasepointTable};
 use curve25519_dalek::scalar::Scalar;
 
 use rand_core::{CryptoRng, RngCore};
@@ -74,7 +74,6 @@ fn perm_inv(v: &[u8; 32]) -> [u8; 32] {
 }
 
 pub struct Trapdoor {
-    side: Side,
     td: Scalar,
 }
 
@@ -143,7 +142,7 @@ impl CommitKey {
                 Rc::new(RistrettoBasepointTable::create(&l)),
                 Rc::new(RistrettoBasepointTable::create(&r)),
             ),
-            Trapdoor { td, side: side },
+            Trapdoor { td },
         )
     }
 
@@ -169,8 +168,6 @@ impl CommitKey {
 mod tests {
     use super::*;
 
-    use rand_core::OsRng;
-
     #[test]
     fn test_perm_inv() {
         let v: [u8; 32] = [
@@ -181,20 +178,4 @@ mod tests {
         let pv = perm(&v);
         assert_eq!(v, perm_inv(&pv));
     }
-
-    /*
-    #[test]
-    fn test_equiv() {
-        let (ck, td) = CommitKey::gen(&mut OsRng, Side::Right);
-        let random = Scalar::random(&mut OsRng);
-        let v1: [u8; 0] = [];
-        let old: (Option<&[u8]>, Option<&[u8]>) = (None, Some(&v1[..]));
-        let com = ck.commit::<[u8], [u8]>(&random, old);
-        let v0: [u8; 1] = [5];
-        let new = (Some(&v0[..]), Some(&v1[..]));
-        let random_new = td.equiv(&random, old, new);
-        let com_new = ck.commit(&random_new, new);
-        assert_eq!(com, com_new);
-    }
-    */
 }

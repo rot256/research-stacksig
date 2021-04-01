@@ -5,11 +5,10 @@ The resuling ring signature / 1-of-many proof has a size `64 + 64 * log(n)` byte
 
 # Running the benchmarks
 
-To reproduce the benchmarks, run:
+To reproduce the benchmarks:
 
-```
-RUSTFLAGS="-C target-cpu=native" cargo bench
-```
+1. Get the latest nightly Rust from [Rustup](https://rustup.rs/).
+2. Run `RUSTFLAGS="-C target-cpu=native" cargo bench`
 
 # Warning
 

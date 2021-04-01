@@ -1,5 +1,3 @@
-use sha2::{Digest, Sha512};
-
 use rand_core::{CryptoRng, RngCore};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_TABLE;
@@ -50,7 +48,7 @@ impl Stackable for Schnorr {
     }
 
     fn sigma_z(
-        statement: &Self::Statement,
+        _statement: &Self::Statement,
         witness: &Self::Witness,
         state: &Self::State,
         challenge: &Self::Challenge,
@@ -64,8 +62,8 @@ impl Stackable for Schnorr {
     fn ehvzk(
         precomp: &Self::Precompute,
         statement: &Self::Statement,
-        challenge: &Self::Challenge,
-        z: &Self::MessageZ,
+        _challenge: &Self::Challenge,
+        _z: &Self::MessageZ,
     ) -> Self::MessageA {
         // g^z st^-c = a
         (precomp.0 + precomp.1 * statement).compress()

@@ -9,7 +9,15 @@ mod fiat;
 mod schnorr;
 mod stack;
 
+use compiler::*;
+
 use test::Bencher;
+
+use rand_core::OsRng;
+
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_TABLE;
+use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
 
 #[derive(Copy, Clone)]
 pub enum Side {
@@ -30,34 +38,22 @@ type S1024 = compiler::Compiled<S512>;
 type S2048 = compiler::Compiled<S1024>;
 type S4096 = compiler::Compiled<S2048>;
 
-type Sig2 = fiat::SignatureScheme<S2>;
-type Sig4 = fiat::SignatureScheme<S4>;
-type Sig8 = fiat::SignatureScheme<S8>;
-type Sig16 = fiat::SignatureScheme<S16>;
-type Sig32 = fiat::SignatureScheme<S32>;
-type Sig64 = fiat::SignatureScheme<S64>;
-type Sig128 = fiat::SignatureScheme<S128>;
-type Sig256 = fiat::SignatureScheme<S256>;
-type Sig512 = fiat::SignatureScheme<S512>;
-type Sig1024 = fiat::SignatureScheme<S1024>;
-type Sig2048 = fiat::SignatureScheme<S2048>;
-type Sig4096 = fiat::SignatureScheme<S4096>;
-
-use rand_core::OsRng;
-
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_TABLE;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
-
-use compiler::*;
-
-use schnorr::Schnorr;
-
-use stack::{Message, Stackable};
+pub type Sig2 = fiat::SignatureScheme<S2>;
+pub type Sig4 = fiat::SignatureScheme<S4>;
+pub type Sig8 = fiat::SignatureScheme<S8>;
+pub type Sig16 = fiat::SignatureScheme<S16>;
+pub type Sig32 = fiat::SignatureScheme<S32>;
+pub type Sig64 = fiat::SignatureScheme<S64>;
+pub type Sig128 = fiat::SignatureScheme<S128>;
+pub type Sig256 = fiat::SignatureScheme<S256>;
+pub type Sig512 = fiat::SignatureScheme<S512>;
+pub type Sig1024 = fiat::SignatureScheme<S1024>;
+pub type Sig2048 = fiat::SignatureScheme<S2048>;
+pub type Sig4096 = fiat::SignatureScheme<S4096>;
 
 macro_rules! compile {
     ($pks:expr, $sk:expr) => {{
-        let sk = CompiledWitness::new($sk, Side::Left);
+        let sk = CompiledWitness::new($sk, Side::Left); // for benchmarking the signer is always the left-most key
         let len = $pks.len() / 2;
         let mut pk: Vec<_> = Vec::with_capacity(len);
         let mut pks = $pks.into_iter();
@@ -150,6 +146,7 @@ fn bench_sig8(b: &mut Bencher) {
     bench_scheme!(b, 3, Sig8);
 }
 
+
 #[bench]
 fn bench_sig16(b: &mut Bencher) {
     bench_scheme!(b, 4, Sig16);
@@ -180,22 +177,22 @@ fn bench_sig512(b: &mut Bencher) {
     bench_scheme!(b, 9, Sig512);
 }
 
+#[cfg(not(test))]
 #[bench]
 fn bench_sig1024(b: &mut Bencher) {
     bench_scheme!(b, 10, Sig1024);
 }
 
+#[cfg(not(test))]
 #[bench]
 fn bench_sig2048(b: &mut Bencher) {
     bench_scheme!(b, 11, Sig2048);
 }
 
+#[cfg(not(test))]
 #[bench]
 fn bench_sig4096(b: &mut Bencher) {
     bench_scheme!(b, 12, Sig4096);
 }
 
-fn main() {
 
-    //Sig2::sign(&mut OsRng);
-}
