@@ -3,7 +3,7 @@ name = "stacksig"
 version = "0.1.0"
 authors = ["Mathias Hall-Andersen <mathias@hall-andersen.dk>"]
 edition = "2018"
-license = "MIT"
+license = "GPLv3"
 
 [dependencies]
 curve25519-dalek = "3"
